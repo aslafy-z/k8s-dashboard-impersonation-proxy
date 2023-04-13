@@ -35,6 +35,8 @@ $ curl http://localhost:8080
 
 ## Setup
 
+Automatically built Docker image can be found at `ghcr.io/aslafy-z/k8s-dashboard-impersonation-proxy:latest`. Latest being the latest release, you can replace it with any Git tag.
+
 TBD - Sample Kubernetes setup with nginx and oauth2-proxy.
 
 ## Contributing
