@@ -20,7 +20,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: ${{ steps.tag_action.outputs.new_tag }}
         with:
-          name: Release ${{ steps.tag_action.outputs.new_tag }}
+          name: ${{ steps.tag_action.outputs.new_tag }}
           tag_name: ${{ steps.tag_action.outputs.new_tag }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
