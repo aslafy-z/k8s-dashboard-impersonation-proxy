@@ -1,4 +1,6 @@
-FROM golang:alpine # AS builder
+## TODO: Restore once debugging is done
+# FROM golang:alpine AS builder
+FROM golang:alpine
 WORKDIR /app
 COPY . .
 RUN go get .
