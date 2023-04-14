@@ -1,13 +1,16 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	env "github.com/caarlos0/env/v8"
 )
@@ -19,6 +22,7 @@ type config struct {
 	HeaderUsername      string `env:"HEADER_USERNAME,required" envDefault:"X-Auth-Request-Preferred-Username"`
 	HeaderGroups        string `env:"HEADER_GROUPS,required" envDefault:"X-Auth-Request-Groups"`
 	ListenAddress       string `env:"LISTEN_ADDRESS,required" envDefault:":8080"`
+	InsecureTLSVerify   bool   `env:"INSECURE_TLS_VERIFY" envDefault:"false"`
 	Debug               bool   `env:"DEBUG" envDefault:"false"`
 }
 
@@ -86,7 +90,15 @@ func handleRequest(res http.ResponseWriter, req *http.Request) {
 			req.Header.Set("User-Agent", "")
 		}
 	}}
-
+	proxy.Transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: cfg.InsecureTLSVerify},
+	}
 	proxy.ServeHTTP(res, req)
 }
 
