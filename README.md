@@ -20,6 +20,8 @@ This tool will remap these headers to the Kubernetes Dashboard impersonation hea
 
 Additionally, it will inject the `Authorization` header with the `Bearer` token sourced from a Kubernetes service account.
 
+> ⚠️ Caution: This proxy works well with kubernetes-dashboard set to 1 replicas. ⚠️
+
 ## Local development
 
 ```bash
