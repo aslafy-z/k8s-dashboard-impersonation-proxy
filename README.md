@@ -4,6 +4,10 @@ This is a tool that injects authorization and remaps impersonation headers to th
 
 ![Kubernetes dashboard impersonation scheme](https://user-images.githubusercontent.com/8249283/54769658-03c87a00-4bd8-11e9-86ea-ea9165bb82da.png)
 
+References:
+- https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation
+- https://github.com/kubernetes/dashboard/blob/master/docs/user/README.md#user-impersonation
+
 ## Usage with nginx and oauth2-proxy
 
 oauth2-proxy reference: <https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/overview/>
