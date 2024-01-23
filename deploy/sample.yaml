@@ -83,24 +83,6 @@ spec:
   selector:
     app.kubernetes.io/name: k8s-dashboard-impersonation-proxy
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: kubernetes-dashboard
-  annotations:
-spec:
-  rules:
-  - host: dashboard.example.com
-    http:
-      paths:
-      - backend:
-          service:
-            name: kubernetes-dashboard
-            port:
-              name: proxy-http
-        path: /
-        pathType: Prefix
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
