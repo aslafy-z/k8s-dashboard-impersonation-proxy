@@ -43,7 +43,22 @@ $ curl http://localhost:8080
 
 Automatically built Docker image can be found at `ghcr.io/aslafy-z/k8s-dashboard-impersonation-proxy:latest`. Latest being the latest release, you can replace it with any Git tag.
 
-TBD - Sample Kubernetes setup with nginx and oauth2-proxy.
+### Demo
+
+```shell
+$ kind create cluster
+$ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/aslafy-z/k8s-dashboard-impersonation-proxy/main/deploy/sample.yaml
+$ kubectl port-forward -n kubernetes-dashboard service/k8s-dashboard-impersonation-proxy 8080:80
+$ curl http://localhost:8080/api/v1/namespace/kube-system -H 'Impersonate-User: restricted-user'
+# Restricted user CAN access default namespace
+$ curl http://localhost:8080/api/v1/namespace/default -H 'Impersonate-User: restricted-user' # OK
+# Restricted user CAN NOT access kube-system namespace
+$ curl -vv http://localhost:8080/api/v1/namespace/kube-system -H 'Impersonate-User: admin' -H 'Impersonate-Group: system:masters'
+# Cluster admin can access all namespaces
+```
+
+TBD - Sample Kubernetes setup with oauth2-proxy.
 
 ## Contributing
 
