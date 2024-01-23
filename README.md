@@ -49,13 +49,15 @@ Automatically built Docker image can be found at `ghcr.io/aslafy-z/k8s-dashboard
 $ kind create cluster
 $ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
 $ kubectl apply -f https://raw.githubusercontent.com/aslafy-z/k8s-dashboard-impersonation-proxy/main/deploy/sample.yaml
+$ kubectl wait deployment -n kubernetes-dashboard kubernetes-dashboard --for condition=Available=True
+$ kubectl wait deployment -n kubernetes-dashboard k8s-dashboard-impersonation-proxy --for condition=Available=True
 $ kubectl port-forward -n kubernetes-dashboard service/k8s-dashboard-impersonation-proxy 8080:80
-$ curl http://localhost:8080/api/v1/namespace/kube-system -H 'Impersonate-User: restricted-user'
-# Restricted user CAN access default namespace
-$ curl http://localhost:8080/api/v1/namespace/default -H 'Impersonate-User: restricted-user' # OK
-# Restricted user CAN NOT access kube-system namespace
-$ curl -vv http://localhost:8080/api/v1/namespace/kube-system -H 'Impersonate-User: admin' -H 'Impersonate-Group: system:masters'
-# Cluster admin can access all namespaces
+$ curl http://localhost:8080/api/v1/service/default -H 'Impersonate-User: restricted-user'
+# User 'restricted-user' CAN list services in default namespace
+$ curl http://localhost:8080/api/v1/service/kube-system -H 'Impersonate-User: restricted-user'
+# User 'restricted-user' CAN NOT list services in kube-system namespace
+$ curl -vv http://localhost:8080/api/v1/service/kube-system -H 'Impersonate-User: admin' -H 'Impersonate-Group: system:masters'
+# Group 'system:masters' CAN list services in default namespace
 ```
 
 TBD - Sample Kubernetes setup with oauth2-proxy.
