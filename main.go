@@ -149,10 +149,10 @@ func main() {
 	}
 
 	// listen and serve
-	http.HandleFunc("/-/ready", logRequest(handleReadinessRequest))
-	http.HandleFunc("/", logRequest(handleRequest))
+	http.HandleFunc("/-/ready", handleReadinessRequest)
+	http.HandleFunc("/", handleRequest)
 	log.Printf("info: listening on %s\n", cfg.ListenAddress)
-	if err := http.ListenAndServe(cfg.ListenAddress, nil); err != nil {
+	if err := http.ListenAndServe(cfg.ListenAddress, logRequest(http.DefaultServeMux)); err != nil {
 		log.Fatalf("error: listen: %+v\n", err)
 	}
 }
