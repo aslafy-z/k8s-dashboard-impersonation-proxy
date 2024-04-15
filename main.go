@@ -99,9 +99,9 @@ func logRequest(handler http.Handler) http.Handler {
 func NewReverseProxy(target *url.URL) *ReverseProxy {
 	p := &ReverseProxy{Director: func(req *http.Request) {
 		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
-		req.URL.Scheme = targetUrl.Scheme
-		req.URL.Host = targetUrl.Host
-		req.Host = targetUrl.Host
+		req.URL.Scheme = target.Scheme
+		req.URL.Host = target.Host
+		req.Host = target.Host
 		if _, ok := req.Header["User-Agent"]; !ok {
 			// explicitly disable User-Agent so it's not set to default value
 			req.Header.Set("User-Agent", "")
