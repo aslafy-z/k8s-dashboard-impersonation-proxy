@@ -5,9 +5,6 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,8 +14,8 @@ jobs:
         id: tag_action
         uses: mathieudutour/github-tag-action@v6.0
         with:
+          github_token: ${{ secrets.PAT_TOKEN }}
           default_bump: false
-          github_token: ${{ github.token }}
       - name: Release
         uses: softprops/action-gh-release@v1
         if: ${{ steps.tag_action.outputs.new_tag }}
@@ -27,3 +24,4 @@ jobs:
           tag_name: ${{ steps.tag_action.outputs.new_tag }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
+          token: ${{ secrets.PAT_TOKEN }}
