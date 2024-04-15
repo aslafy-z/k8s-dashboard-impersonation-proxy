@@ -55,7 +55,7 @@ spec:
     spec:
       containers:
       - name: k8s-dashboard-impersonation-proxy
-        image: ghcr.io/aslafy-z/k8s-dashboard-impersonation-proxy:v0.3.0
+        image: ghcr.io/aslafy-z/k8s-dashboard-impersonation-proxy:v0.4.0
         imagePullPolicy: IfNotPresent
         env:
         - name: DEBUG
@@ -68,6 +68,24 @@ spec:
         - containerPort: 8080
           name: http
           protocol: TCP
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /-/ready
+            port: http
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /-/ready
+            port: http
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
       serviceAccountName: k8s-dashboard-impersonation-proxy
 ---
 apiVersion: v1
