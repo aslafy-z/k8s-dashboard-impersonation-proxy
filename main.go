@@ -102,6 +102,19 @@ func handleRequest(res http.ResponseWriter, req *http.Request) {
 	proxy.ServeHTTP(res, req)
 }
 
+// handleReadinessRequest handles incoming readiness requests
+func handleReadinessRequest(res http.ResponseWriter, req *http.Request) {
+	res.WriteHeader(http.StatusOK)
+	res.Write([]byte("OK"))
+}
+
+func logRequest(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		log.Printf("%s %s %s\n", req.RemoteAddr, req.Method, req.URL)
+		handler.ServeHTTP(res, req)
+	})
+}
+
 func main() {
 	// retrieve configuration
 	if err := env.Parse(&cfg); err != nil {
@@ -136,9 +149,10 @@ func main() {
 	}
 
 	// listen and serve
+	http.HandleFunc("/-/ready", handleReadinessRequest)
 	http.HandleFunc("/", handleRequest)
 	log.Printf("info: listening on %s\n", cfg.ListenAddress)
-	if err := http.ListenAndServe(cfg.ListenAddress, nil); err != nil {
+	if err := http.ListenAndServe(cfg.ListenAddress, logRequest(http.DefaultServeMux)); err != nil {
 		log.Fatalf("error: listen: %+v\n", err)
 	}
 }
