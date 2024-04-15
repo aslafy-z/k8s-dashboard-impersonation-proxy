@@ -110,7 +110,7 @@ func handleReadinessRequest(res http.ResponseWriter, req *http.Request) {
 
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		log.Printf("%s %s %s\n", req.RemoteAddr, req.Method, res.URL)
+		log.Printf("%s %s %s\n", req.RemoteAddr, req.Method, req.URL)
 		handler.ServeHTTP(res, req)
 	})
 }
