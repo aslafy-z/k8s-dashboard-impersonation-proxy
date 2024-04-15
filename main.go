@@ -13,7 +13,6 @@ import (
 	"time"
 
 	env "github.com/caarlos0/env/v8"
-	_ "net/http/pprof"
 )
 
 type config struct {
@@ -28,7 +27,8 @@ type config struct {
 }
 
 var (
-	cfg config
+	cfg   config
+	proxy httputil.ReverseProxy
 )
 
 // IsUrl checks if a string is a valid URL
@@ -80,26 +80,6 @@ func handleRequest(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// forward request
-	targetUrl, _ := url.Parse(cfg.TargetURL)
-	proxy := httputil.ReverseProxy{Director: func(req *http.Request) {
-		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
-		req.URL.Scheme = targetUrl.Scheme
-		req.URL.Host = targetUrl.Host
-		req.Host = targetUrl.Host
-		if _, ok := req.Header["User-Agent"]; !ok {
-			// explicitly disable User-Agent so it's not set to default value
-			req.Header.Set("User-Agent", "")
-		}
-	}}
-	proxy.Transport = &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:     &tls.Config{InsecureSkipVerify: cfg.InsecureTLSVerify},
-	}
 	proxy.ServeHTTP(res, req)
 }
 
@@ -114,6 +94,29 @@ func logRequest(handler http.Handler) http.Handler {
 		log.Printf("%s %s %s\n", req.RemoteAddr, req.Method, req.URL)
 		handler.ServeHTTP(res, req)
 	})
+}
+
+func NewReverseProxy(target *url.URL) *ReverseProxy {
+	p := &ReverseProxy{Director: func(req *http.Request) {
+		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+		req.URL.Scheme = targetUrl.Scheme
+		req.URL.Host = targetUrl.Host
+		req.Host = targetUrl.Host
+		if _, ok := req.Header["User-Agent"]; !ok {
+			// explicitly disable User-Agent so it's not set to default value
+			req.Header.Set("User-Agent", "")
+		}
+	}}
+	p.Transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: cfg.InsecureTLSVerify},
+	}
+	return p
 }
 
 func main() {
@@ -148,6 +151,9 @@ func main() {
 		cfg.ServiceAccountToken = string(token)
 		log.Printf("info: using service account token from '%s'\n", cfg.ServiceAccountPath)
 	}
+
+	tu := url.Parse(cfg.TargetURL)
+	proxy := NewReverseProxy(tu)
 
 	// listen and serve
 	http.HandleFunc("/-/ready", handleReadinessRequest)
