@@ -16,24 +16,24 @@ import (
 )
 
 type config struct {
-	ServiceAccountToken string `env:"SERVICE_ACCOUNT_TOKEN,unset"`
-	ServiceAccountPath  string `env:"SERVICE_ACCOUNT_PATH" envDefault:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
-	TargetURL           string `env:"TARGET_URL,required"`
-	HeaderUsername      string `env:"HEADER_USERNAME,required" envDefault:"X-Auth-Request-Preferred-Username"`
-	HeaderGroups        string `env:"HEADER_GROUPS,required" envDefault:"X-Auth-Request-Groups"`
-	ListenAddress       string `env:"LISTEN_ADDRESS,required" envDefault:":8080"`
-	InsecureTLSVerify   bool   `env:"INSECURE_TLS_VERIFY" envDefault:"false"`
-	Debug               bool   `env:"DEBUG" envDefault:"false"`
+	ServiceAccountToken string  `env:"SERVICE_ACCOUNT_TOKEN,unset"`
+	ServiceAccountPath  string  `env:"SERVICE_ACCOUNT_PATH" envDefault:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
+	TargetURL           url.URL `env:"TARGET_URL,required"`
+	HeaderUsername      string  `env:"HEADER_USERNAME,required" envDefault:"X-Auth-Request-Preferred-Username"`
+	HeaderGroups        string  `env:"HEADER_GROUPS,required" envDefault:"X-Auth-Request-Groups"`
+	ListenAddress       string  `env:"LISTEN_ADDRESS,required" envDefault:":8080"`
+	InsecureTLSVerify   bool    `env:"INSECURE_TLS_VERIFY" envDefault:"false"`
+	Debug               bool    `env:"DEBUG" envDefault:"false"`
 }
 
 var (
-	cfg config
+	cfg   config
+	proxy *httputil.ReverseProxy
 )
 
 // IsUrl checks if a string is a valid URL
-func IsUrl(str string) bool {
-	u, err := url.Parse(str)
-	return err == nil && u.Scheme != "" && u.Host != ""
+func IsValidUrl(u *url.URL) bool {
+	return u.Scheme != "" && u.Host != ""
 }
 
 // injectHeaders injects Authorization, User and Groups headers to the request
@@ -79,26 +79,6 @@ func handleRequest(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// forward request
-	targetUrl, _ := url.Parse(cfg.TargetURL)
-	proxy := httputil.ReverseProxy{Director: func(req *http.Request) {
-		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
-		req.URL.Scheme = targetUrl.Scheme
-		req.URL.Host = targetUrl.Host
-		req.Host = targetUrl.Host
-		if _, ok := req.Header["User-Agent"]; !ok {
-			// explicitly disable User-Agent so it's not set to default value
-			req.Header.Set("User-Agent", "")
-		}
-	}}
-	proxy.Transport = &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:     &tls.Config{InsecureSkipVerify: cfg.InsecureTLSVerify},
-	}
 	proxy.ServeHTTP(res, req)
 }
 
@@ -115,6 +95,29 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
+func NewReverseProxy() *httputil.ReverseProxy {
+	p := &httputil.ReverseProxy{Director: func(req *http.Request) {
+		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+		req.URL.Scheme = cfg.TargetURL.Scheme
+		req.URL.Host = cfg.TargetURL.Host
+		req.Host = cfg.TargetURL.Host
+		if _, ok := req.Header["User-Agent"]; !ok {
+			// explicitly disable User-Agent so it's not set to default value
+			req.Header.Set("User-Agent", "")
+		}
+	}}
+	p.Transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: cfg.InsecureTLSVerify},
+	}
+	return p
+}
+
 func main() {
 	// retrieve configuration
 	if err := env.Parse(&cfg); err != nil {
@@ -122,7 +125,7 @@ func main() {
 	}
 
 	// validate configuration
-	if ok := IsUrl(cfg.TargetURL); !ok {
+	if ok := IsValidUrl(&cfg.TargetURL); !ok {
 		log.Fatalln("error: target URL is not valid")
 	}
 	if len(cfg.ServiceAccountToken) == 0 && len(cfg.ServiceAccountPath) == 0 {
@@ -147,6 +150,9 @@ func main() {
 		cfg.ServiceAccountToken = string(token)
 		log.Printf("info: using service account token from '%s'\n", cfg.ServiceAccountPath)
 	}
+
+	// initialize reverse proxy
+	proxy = NewReverseProxy()
 
 	// listen and serve
 	http.HandleFunc("/-/ready", handleReadinessRequest)
