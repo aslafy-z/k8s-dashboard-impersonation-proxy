@@ -152,7 +152,7 @@ func main() {
 	}
 
 	// initialize reverse proxy
-	proxy := NewReverseProxy()
+	proxy = NewReverseProxy()
 
 	// listen and serve
 	http.HandleFunc("/-/ready", handleReadinessRequest)
