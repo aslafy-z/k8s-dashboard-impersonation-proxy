@@ -104,8 +104,15 @@ func handleRequest(res http.ResponseWriter, req *http.Request) {
 
 // handleReadinessRequest handles incoming readiness requests
 func handleReadinessRequest(res http.ResponseWriter, req *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	res.WriteHeader(http.StatusOK)
+	res.Write([]byte("OK"))
+}
+
+func logRequest(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		log.Printf("%s %s %s\n", req.RemoteAddr, req.Method, res.URL)
+		handler.ServeHTTP(res, req)
+	})
 }
 
 func main() {
@@ -142,8 +149,8 @@ func main() {
 	}
 
 	// listen and serve
-	http.HandleFunc("/-/ready", handleReadinessRequest)
-	http.HandleFunc("/", handleRequest)
+	http.HandleFunc("/-/ready", logRequest(handleReadinessRequest))
+	http.HandleFunc("/", logRequest(handleRequest))
 	log.Printf("info: listening on %s\n", cfg.ListenAddress)
 	if err := http.ListenAndServe(cfg.ListenAddress, nil); err != nil {
 		log.Fatalf("error: listen: %+v\n", err)
