@@ -28,6 +28,7 @@ type config struct {
 
 var (
 	cfg config
+	ready bool 
 )
 
 // IsUrl checks if a string is a valid URL
@@ -102,6 +103,12 @@ func handleRequest(res http.ResponseWriter, req *http.Request) {
 	proxy.ServeHTTP(res, req)
 }
 
+// handleReadinessRequest handles incoming readiness requests
+func handleReadinessRequest(res http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
+
 func main() {
 	// retrieve configuration
 	if err := env.Parse(&cfg); err != nil {
@@ -136,7 +143,7 @@ func main() {
 	}
 
 	// listen and serve
-	http.HandleFunc("/", handleRequest)
+	http.HandleFunc("/-/ready", handleRequest)
 	log.Printf("info: listening on %s\n", cfg.ListenAddress)
 	if err := http.ListenAndServe(cfg.ListenAddress, nil); err != nil {
 		log.Fatalf("error: listen: %+v\n", err)
