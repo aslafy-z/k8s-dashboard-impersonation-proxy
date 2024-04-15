@@ -11,8 +11,8 @@ on:
   push:
     branches: [ main ]
     # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
-  pull_request:
+    tags: [ 'v*' ]
+  pull_request_target:
     branches: [ main ]
 
 env:
@@ -32,13 +32,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        uses: docker/login-action@1f401f745bf57e30b3a2800ad308a87d2ebdf14b
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -48,14 +50,14 @@ jobs:
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        uses: docker/metadata-action@05d3089a30fbc2ba24374d1faf33f9b0faaf65bf
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
-        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        uses: docker/build-push-action@0f847266c302569530c95bfa228489494c43b002
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
