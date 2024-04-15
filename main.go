@@ -28,7 +28,6 @@ type config struct {
 
 var (
 	cfg config
-	ready bool 
 )
 
 // IsUrl checks if a string is a valid URL
