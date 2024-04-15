@@ -16,14 +16,14 @@ import (
 )
 
 type config struct {
-	ServiceAccountToken string `env:"SERVICE_ACCOUNT_TOKEN,unset"`
-	ServiceAccountPath  string `env:"SERVICE_ACCOUNT_PATH" envDefault:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
-	TargetURL           string `env:"TARGET_URL,required"`
-	HeaderUsername      string `env:"HEADER_USERNAME,required" envDefault:"X-Auth-Request-Preferred-Username"`
-	HeaderGroups        string `env:"HEADER_GROUPS,required" envDefault:"X-Auth-Request-Groups"`
-	ListenAddress       string `env:"LISTEN_ADDRESS,required" envDefault:":8080"`
-	InsecureTLSVerify   bool   `env:"INSECURE_TLS_VERIFY" envDefault:"false"`
-	Debug               bool   `env:"DEBUG" envDefault:"false"`
+	ServiceAccountToken string  `env:"SERVICE_ACCOUNT_TOKEN,unset"`
+	ServiceAccountPath  string  `env:"SERVICE_ACCOUNT_PATH" envDefault:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
+	TargetURL           url.URL `env:"TARGET_URL,required"`
+	HeaderUsername      string  `env:"HEADER_USERNAME,required" envDefault:"X-Auth-Request-Preferred-Username"`
+	HeaderGroups        string  `env:"HEADER_GROUPS,required" envDefault:"X-Auth-Request-Groups"`
+	ListenAddress       string  `env:"LISTEN_ADDRESS,required" envDefault:":8080"`
+	InsecureTLSVerify   bool    `env:"INSECURE_TLS_VERIFY" envDefault:"false"`
+	Debug               bool    `env:"DEBUG" envDefault:"false"`
 }
 
 var (
@@ -32,9 +32,8 @@ var (
 )
 
 // IsUrl checks if a string is a valid URL
-func IsUrl(str string) bool {
-	u, err := url.Parse(str)
-	return err == nil && u.Scheme != "" && u.Host != ""
+func IsValidUrl(u *url.URL) bool {
+	return u.Scheme != "" && u.Host != ""
 }
 
 // injectHeaders injects Authorization, User and Groups headers to the request
@@ -96,12 +95,12 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
-func NewReverseProxy(target *url.URL) *ReverseProxy {
+func NewReverseProxy() *ReverseProxy {
 	p := &ReverseProxy{Director: func(req *http.Request) {
 		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
-		req.URL.Scheme = target.Scheme
-		req.URL.Host = target.Host
-		req.Host = target.Host
+		req.URL.Scheme = cfg.TargetUrl.Scheme
+		req.URL.Host = cfg.TargetUrl.Host
+		req.Host = cfg.TargetUrl.Host
 		if _, ok := req.Header["User-Agent"]; !ok {
 			// explicitly disable User-Agent so it's not set to default value
 			req.Header.Set("User-Agent", "")
@@ -126,7 +125,7 @@ func main() {
 	}
 
 	// validate configuration
-	if ok := IsUrl(cfg.TargetURL); !ok {
+	if ok := IsValidUrl(cfg.TargetURL); !ok {
 		log.Fatalln("error: target URL is not valid")
 	}
 	if len(cfg.ServiceAccountToken) == 0 && len(cfg.ServiceAccountPath) == 0 {
@@ -152,8 +151,8 @@ func main() {
 		log.Printf("info: using service account token from '%s'\n", cfg.ServiceAccountPath)
 	}
 
-	tu := url.Parse(cfg.TargetURL)
-	proxy := NewReverseProxy(tu)
+	// initialize reverse proxy
+	proxy := NewReverseProxy()
 
 	// listen and serve
 	http.HandleFunc("/-/ready", handleReadinessRequest)
