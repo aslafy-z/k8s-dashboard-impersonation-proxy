@@ -28,7 +28,7 @@ type config struct {
 
 var (
 	cfg   config
-	proxy httputil.ReverseProxy
+	proxy *httputil.ReverseProxy
 )
 
 // IsUrl checks if a string is a valid URL
