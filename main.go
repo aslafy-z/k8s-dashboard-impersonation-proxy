@@ -95,8 +95,8 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
-func NewReverseProxy() *ReverseProxy {
-	p := &ReverseProxy{Director: func(req *http.Request) {
+func NewReverseProxy() *httputil.ReverseProxy {
+	p := &httputil.ReverseProxy{Director: func(req *http.Request) {
 		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
 		req.URL.Scheme = cfg.TargetUrl.Scheme
 		req.URL.Host = cfg.TargetUrl.Host
@@ -125,7 +125,7 @@ func main() {
 	}
 
 	// validate configuration
-	if ok := IsValidUrl(cfg.TargetURL); !ok {
+	if ok := IsValidUrl(&cfg.TargetURL); !ok {
 		log.Fatalln("error: target URL is not valid")
 	}
 	if len(cfg.ServiceAccountToken) == 0 && len(cfg.ServiceAccountPath) == 0 {
